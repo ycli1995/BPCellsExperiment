@@ -1,0 +1,44 @@
+Package: BPCellsExperiment
+Type: Package
+Title: SingleCellExperiment for BPCells
+Version: 0.0.1
+Date: 2023-09-15
+Authors@R: person(given = "Yuchen", family = "Li", email = "ycli1995@outlook.com", role = c("aut", "cre"))
+Description: This package defines S4 classes for storing single-cell data based on 'BPCells'.
+License: MIT + file LICENSE
+Depends: 
+    R (>= 4.1.0),
+    BiocGenerics,
+    BPCells, 
+    methods, 
+    MultiAssayExperiment,
+    SingleCellExperiment,
+    utils
+Imports:
+    BiocBaseUtils, 
+    DelayedArray,
+    dplyr, 
+    easy.utils,
+    fastmatch,
+    GenomeInfoDb,
+    GenomicRanges,
+    HDF5Array,
+    hdf5r,
+    hdf5r.Extra,
+    magrittr,
+    Matrix,
+    MatrixExtra, 
+    rlang,
+    rtracklayer,
+    S4Vectors,
+    SeuratObject,
+    Signac,
+    SummarizedExperiment,
+    tibble
+Suggests:
+    data.table,
+    R.utils
+Remotes:
+    ycli1995/BPCells
+RoxygenNote: 7.2.3
+Encoding: UTF-8
