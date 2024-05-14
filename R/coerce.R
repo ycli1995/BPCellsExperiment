@@ -22,6 +22,7 @@ setAs(
       j = to(x = from) - 1L,
       x = values(x = from)[, 1],
       dims = c(nLnode(x = from), nRnode(x = from)),
+      repr = "C",
       index1 = FALSE
     ))
   }

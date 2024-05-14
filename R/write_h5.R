@@ -47,8 +47,8 @@ h5Prep.LinearEmbeddingMatrix <- function(x, ...) {
 #' @method h5Prep GRanges
 h5Prep.GRanges <- function(x, ...) {
   df <- as.data.frame(x = x)
-  sinfo.df <- as.data.frame(x = seqinfo(x = x))
-  sinfo.df <- sinfo.df[, colSums(x = is.na(x = sinfo.df)) == 0, drop = FALSE]
+  sinfo.df <- seqinfo(x = x) %>%
+    h5Prep()
   return(list(granges = df, seqinfo = sinfo.df))
 }
 
@@ -90,9 +90,19 @@ h5Prep.SingleCellExperiment <- function(x, ...) {
   old_func <- getS3method(f = "h5Prep", class = "RangedSummarizedExperiment")
   out <- old_func(x = x, ...)
   out[[.alt_key]] <- altExps(x = x)
-  out[[.red_key]] = reducedDims(x = x)
-  out[[.colp_key]] = colPairs(x = x, asSparse = TRUE)
-  out[[.rowp_key]] = rowPairs(x = x, asSparse = TRUE)
+  out[[.red_key]] <- reducedDims(x = x)
+  out[[.colp_key]] <- colPairs(x = x, asSparse = FALSE)
+  for (i in seq_along(out[[.colp_key]])) {
+    out[[.colp_key]][[i]] <- out[[.colp_key]][[i]] %>%
+      as(Class = "dgCMatrix")
+    gc(verbose = FALSE)
+  }
+  out[[.rowp_key]] <- rowPairs(x = x, asSparse = FALSE)
+  for (i in seq_along(out[[.rowp_key]])) {
+    out[[.rowp_key]][[i]] <- out[[.rowp_key]][[i]] %>%
+      as(Class = "dgCMatrix")
+    gc(verbose = FALSE)
+  }
   return(out)
 }
 
@@ -132,7 +142,12 @@ h5Prep.SingleCellMultiExperiment <- function(x, ...) {
     metadata =  metadata(x = x)
   )
   out[[.red_key]] <- reducedDims(x = int_SCE(x = x))
-  out[[.colp_key]] <- colPairs(x = int_SCE(x = x), asSparse = TRUE)
+  out[[.colp_key]] <- colPairs(x = int_SCE(x = x), asSparse = FALSE)
+  for (i in seq_along(out[[.colp_key]])) {
+    out[[.colp_key]][[i]] <- out[[.colp_key]][[i]] %>%
+      as(Class = "dgCMatrix")
+    gc(verbose = FALSE)
+  }
   return(out)
 }
 
@@ -529,6 +544,7 @@ writeH5SCME.SingleCellMultiExperiment <- function(
       gzip_level = gzip_level
     )
   }
+  gc(verbose = FALSE)
   return(invisible(x = NULL))
 }
 
@@ -587,5 +603,6 @@ writeH5SCME.SingleCellMultiExperiment <- function(
       gzip_level = gzip_level
     )
   }
+  gc(verbose = FALSE)
   return(invisible(x = NULL))
 }

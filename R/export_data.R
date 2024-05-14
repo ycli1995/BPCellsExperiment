@@ -49,22 +49,23 @@ exportH5AD.SingleCellExperiment <- function(
   if (!identical(x = file, y = out.file)) {
     on.exit(expr = unlink(x = file, force = TRUE))
   }
-  object %>%
-    .prep_h5ad(
-      X = X,
-      layers = layers,
-      obsm = obsm,
-      obsp = obsp,
-      varp = varp,
-      uns = uns,
-      raw = raw
-    ) %>%
-    .write_h5ad_sce(
-      file = file,
-      name = name,
-      gzip_level = gzip_level,
-      verbose = verbose
-    )
+  object <- .prep_h5ad(
+    object = object,
+    X = X,
+    layers = layers,
+    obsm = obsm,
+    obsp = obsp,
+    varp = varp,
+    uns = uns,
+    raw = raw
+  )
+  .write_h5ad_sce(
+    object = object,
+    file = file,
+    name = name,
+    gzip_level = gzip_level,
+    verbose = verbose
+  )
   file <- file_path_as_absolute(x = file)
   out.file <- out.file %>%
     file_path_as_absolute() %>%
@@ -104,30 +105,45 @@ exportH5AD.SingleCellExperiment <- function(
     as.data.frame()
 
   obsm <- obsm %||% reducedDimNames(x = object)
-  obsm <- intersect(x = obsm, y = reducedDimNames(x = object))
+  obsm <- object %>%
+    reducedDimNames() %>%
+    intersect(x = obsm)
   out$obsm <- list()
   for (i in obsm) {
-    out$obsm[[paste0("X_", i)]] <- object %>%
+    out$obsm[[i]] <- object %>%
       reducedDim(type = i, withDimnames = TRUE) %>%
-      as.matrix()
+      as.matrix() %>%
+      t()
   }
 
   obsp <- obsp %||% colPairNames(x = object)
-  obsp <- intersect(x = obsp, y = colPairNames(x = object))
+  obsp <- object %>%
+    colPairNames() %>%
+    intersect(x = obsp)
   out$obsp <- list()
   for (i in obsp) {
-    out$obsm[[i]] <- colPair(x = object, type = i, asSparse = TRUE)
+    out$obsp[[i]] <- object %>%
+      colPair(type = i, asSparse = FALSE) %>%
+      as(Class = "dgCMatrix")
+    gc(verbose = FALSE)
   }
 
   varp <- varp %||% rowPairNames(x = object)
-  varp <- intersect(x = varp, y = rowPairNames(x = object))
+  varp <- object %>%
+    rowPairNames() %>%
+    intersect(x = varp)
   out$varp <- list()
   for (i in varp) {
-    out$varp[[i]] <- rowPair(x = object, type = i, asSparse = TRUE)
+    out$varp[[i]] <- object %>%
+      rowPair(type = i, asSparse = FALSE) %>%
+      as(Class = "dgCMatrix")
+    gc(verbose = FALSE)
   }
 
   raw <- raw[1] %||% altExpNames(x = object)[1]
-  raw <- intersect(x = raw, y = altExpNames(x = object))
+  raw <- object %>%
+    altExpNames() %>%
+    intersect(x = raw)
   if (length(x = raw) > 0) {
     raw_exp <- altExp(x = object, e = raw)
     if (nrows(x = raw_exp) >= nrows(x = object)) {
@@ -136,15 +152,21 @@ exportH5AD.SingleCellExperiment <- function(
   }
 
   uns <- uns %||% names(x = metadata(x = object))
-  uns <- intersect(x = uns, y = names(x = metadata(x = object)))
+  uns <- object %>%
+    metadata() %>%
+    names() %>%
+    intersect(x = uns)
   out$uns <- metadata(x = object)[uns]
 
+  gc(verbose = FALSE)
   return(out)
 }
 
 .prep_h5ad_layers <- function(object, layers = NULL) {
   out <- list()
-  layers <- intersect(x = layers, y = assayNames(x = object))
+  layers <- object %>%
+    assayNames() %>%
+    intersect(x = layers)
   if (length(x = layers) == 0) {
     return(out)
   }
@@ -189,7 +211,7 @@ exportH5AD.SingleCellExperiment <- function(
     verboseMsg("Writing layer '", i, "'")
     .write_mat_h5ad(
       mat = object$layers[[i]],
-      path = file,
+      file = file,
       name = file.path(name, "layers", i),
       gzip_level = gzip_level
     )

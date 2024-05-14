@@ -62,14 +62,15 @@ ChromExperiment <- function(
     annotations = NULL,
     fragments = NULL
 ) {
-  SingleCellExperiment(...) %>%
-    .sce_to_csce(
-      sep = sep,
-      ranges = ranges,
-      genome = genome,
-      annotations = annotations,
-      fragments = fragments
-    )
+  sce <- SingleCellExperiment(...)
+  .sce_to_csce(
+    sce = sce,
+    sep = sep,
+    ranges = ranges,
+    genome = genome,
+    annotations = annotations,
+    fragments = fragments
+  )
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -206,10 +207,12 @@ setMethod(
         name = "value"
       )
       value[[i]] <- openFragments(x = value[[i]], ...)
-      cells.toload <- setdiff(x = cellNames(x = value[[i]]), y = cells.loaded)
+      cell_selection <- cellNames(x = value[[i]]) %>%
+        setdiff(y = cells.loaded) %>%
+        fastIntersect(x = cells)
       value[[i]] <- select_cells(
         fragments = value[[i]],
-        cell_selection = fastIntersect(x = cells, cells.toload)
+        cell_selection = cell_selection
       )
       cells.loaded <- c(cells.loaded, cellNames(x = value[[i]]))
     }
@@ -285,8 +288,10 @@ setMethod(
   f = "annotations<-",
   signature = c("ChromExperiment", "GRanges"),
   definition = function(x, ..., value) {
-    current.genome <- unique(x = genome(x = x))
-    annot.genome <- unique(x = genome(x = value))
+    current.genome <- genome(x = x) %>%
+      unique()
+    annot.genome <- genome(x = value) %>%
+      unique()
     if (!is.null(x = current.genome)) {
       if (!is.na(x = annot.genome) & (current.genome != annot.genome)) {
         stop("annotations genome does not match genome of the object")

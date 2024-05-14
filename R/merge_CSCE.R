@@ -219,12 +219,13 @@
   # need at least one non-NULL seqinfo, otherwise just set it as NULL
   all.seqinfo <- all.seqinfo[seqinfo.present]
   new.seqinfo <- all.seqinfo[[1]]
-  if (length(x = all.seqinfo) > 1) {
-    new.seqinfo <- all.seqinfo[[1]]
-    # iteratively merge seqinfo objects
-    for (x in 2:length(x = all.seqinfo)) {
-      new.seqinfo <- merge(x = new.seqinfo, y = all.seqinfo[[x]])
-    }
+  if (length(x = all.seqinfo) == 1) {
+    return(all.seqinfo[[1]])
+  }
+  new.seqinfo <- all.seqinfo[[1]]
+  # iteratively merge seqinfo objects
+  for (x in 2:length(x = all.seqinfo)) {
+    new.seqinfo <- merge(x = new.seqinfo, y = all.seqinfo[[x]])
   }
   return(new.seqinfo)
 }
@@ -248,7 +249,7 @@
         "the first object only",
         call. = FALSE, immediate. = TRUE
       )
-      break
+      return(new.annot)
     }
   }
   return(new.annot)
@@ -268,15 +269,16 @@
     verbose = TRUE,
     ...
 ) {
-  SCEs <- SCEs %>%
-    lapply(FUN = .format_csce_rownames) %>%
-    .prep_merge_SCEs(
-      label = label,
-      add.idx = add.idx,
-      idx.collapse = idx.collapse,
-      verbose = verbose
-    )
-
+  for (i in seq_along(SCEs)) {
+    SCEs[[i]] <- .format_csce_rownames(SCEs[[i]])
+  }
+  SCEs <- .prep_merge_SCEs(
+    SCEs = SCEs,
+    label = label,
+    add.idx = add.idx,
+    idx.collapse = idx.collapse,
+    verbose = verbose
+  )
   new.seqinfo <- .merge_seqinfo(SCEs = SCEs, verbose = verbose)
   new.annot <- .merge_annotations(SCEs = SCEs, verbose = verbose)
 
@@ -339,14 +341,17 @@
   new.assays <- list()
   for (i in assays) {
     verboseMsg("Merging peak assay: ", i)
-    new.assays[[i]] <- SCEs %>%
-      lapply(FUN = assay, i = i, withDimnames = TRUE) %>%
-      .merge_peak_single_assay(
-        granges.all = granges.all,
-        reduced.ranges = reduced.ranges,
-        all.nonoverlap = all.nonoverlap,
-        verbose = verbose
-      )
+    mats <- list()
+    for (j in seq_along(SCEs)) {
+      mats[[j]] <- assay(x = SCEs[[j]], i = i, withDimnames = TRUE)
+    }
+    new.assays[[i]] <- .merge_peak_single_assay(
+      mats = mats,
+      granges.all = granges.all,
+      reduced.ranges = reduced.ranges,
+      all.nonoverlap = all.nonoverlap,
+      verbose = verbose
+    )
   }
   reduced.ranges <- as.character(x = reduced.ranges) %>%
     StringToGRanges(sep = c(":", "-"))

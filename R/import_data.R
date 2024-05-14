@@ -139,6 +139,7 @@ read10xMtx <- function(
 #' @importFrom S4Vectors DataFrame
 #' @importFrom hdf5r.Extra h5Read h5List
 #' @importFrom Matrix sparseMatrix
+#' @importFrom rlang is_list
 #' @export
 read10xH5 <- function(path, use.names = TRUE, use.BPCells = FALSE) {
   path <- file_path_as_absolute(x = path)
@@ -153,17 +154,12 @@ read10xH5 <- function(path, use.names = TRUE, use.BPCells = FALSE) {
   for (genome in groups) {
     features <- read_features_func(path, genome)
     barcodes <- h5Read(x = path, name = file.path(genome, "barcodes"))
-    if (use.BPCells) {
-      mat <- open_matrix_10x_hdf5(path = path)
-    } else {
-      mat <- sparseMatrix(
-        i = h5Read(x = path, name = file.path(genome, "indices")),
-        p = h5Read(x = path, name = file.path(genome, "indptr")),
-        x = h5Read(x = path, name = file.path(genome, "data")),
-        dims = h5Read(x = path, name = file.path(genome, "shape")),
-        index1 = FALSE,
-        repr = "C"
-      )
+    mat <- open_matrix_10x_hdf5(path = path)
+    if (is_list(x = mat)) {
+      mat <- mat[[genome]]
+    }
+    if (!use.BPCells) {
+      mat <- as(object = mat, Class = "dgCMatrix")
     }
     if (use.names) {
       rownames(x = mat) <- make.unique(names = features$Name)
@@ -267,7 +263,8 @@ readH5AD <- function(
   obsm <- obsm %||% all.obsm
   obsm <- intersect(x = obsm, y = all.obsm)
   for (i in obsm) {
-    obsm <- h5Read(x = path, name = file.path(name, "obsm", i))
+    obsm <- h5Read(x = path, name = file.path(name, "obsm", i)) %>%
+      t()
     rownames(x = obsm) <- colnames(x = sce)
     colnames(x = obsm) <- paste0(i, "_", seq(ncol(x = obsm)))
     reducedDim(x = sce, type = i) <- LinearEmbeddingMatrix(
@@ -281,7 +278,7 @@ readH5AD <- function(
   for (i in obsp) {
     colPair(x = sce, type = i) <- h5Read(
       x = path,
-      name = file.path(name, "obsm", i)
+      name = file.path(name, "obsp", i)
     )
   }
   all.varp <- h5List(x = path, name = file.path(name, "varp"))

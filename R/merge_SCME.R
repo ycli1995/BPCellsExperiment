@@ -24,17 +24,13 @@
     call. = FALSE, immediate. = TRUE
   )
   for (i in seq_along(SCMEs)) {
-    SCMEs[[i]] <- setColnames(
-      x = SCMEs[[i]],
-      new.names = paste0(rownames(x = colData(x = SCMEs[[i]])), collapse, i)
+    new.names1 <- paste0(rownames(x = colData(x = SCMEs[[i]])), collapse, i)
+    SCMEs[[i]] <- setColnames(x = SCMEs[[i]], new.names = new.names1)
+    new.names2 <- lapply(
+      X = colnames(x = SCMEs[[i]]),
+      FUN = function(x) paste0(x, collapse, i)
     )
-    SCMEs[[i]] <- setColnames(
-      x = SCMEs[[i]],
-      new.names = lapply(
-        X = colnames(x = SCMEs[[i]]),
-        FUN = function(x) paste0(x, collapse, i)
-      )
-    )
+    SCMEs[[i]] <- setColnames(x = SCMEs[[i]], new.names = new.names2)
   }
   return(SCMEs)
 }
@@ -52,26 +48,23 @@
     stopifnot(length(x = add.idx) == length(x = SCMEs))
     verboseMsg("  Adding idx prefixes: ", paste(add.idx, collapse = ", "))
     for (i in seq_along(SCMEs)) {
-      SCMEs[[i]] <- setColnames(
-        x  = SCMEs[[i]],
-        new.names = paste0(
-          add.idx[i],
-          idx.collapse,
-          rownames(x = colData(x = SCMEs[[i]]))
-        )
+      new.names1 <- paste0(
+        add.idx[i],
+        idx.collapse,
+        rownames(x = colData(x = SCMEs[[i]]))
       )
-      SCMEs[[i]] <- setColnames(
-        x = SCMEs[[i]],
-        new.names = lapply(
-          X = colnames(x = SCMEs[[i]]),
-          FUN = function(x) paste0(add.idx, idx.collapse, x)
-        )
+      SCMEs[[i]] <- setColnames(x = SCMEs[[i]], new.names = new.names1)
+      new.names2 <- lapply(
+        X = colnames(x = SCMEs[[i]]),
+        FUN = function(x) paste0(add.idx, idx.collapse, x)
       )
+      SCMEs[[i]] <- setColnames(x = SCMEs[[i]], new.names = new.names2)
     }
   }
   if (!is.null(x = label)) {
     if (is.null(x = names(x = SCMEs))) {
-      names(x = SCMEs) <- as.character(x = seq_along(SCMEs))
+      names(x = SCMEs) <- seq_along(SCMEs) %>%
+        as.character()
     }
     verboseMsg(
       "  Adding column '", label, "' to specify batch info: ",
@@ -81,8 +74,7 @@
       colData(x = SCMEs[[i]])[, label] <- i
     }
   }
-  SCMEs <- .check_duplicated_colnames_SCMEs(SCMEs = SCMEs)
-  return(SCMEs)
+  .check_duplicated_colnames_SCMEs(SCMEs = SCMEs)
 }
 
 #' @importFrom S4Vectors merge
@@ -122,7 +114,8 @@
     unlist() %>%
     table()
   e.use <- experiments %||% names(x = all.exps)
-  e.use <- intersect(x = e.use, y = names(x = all.exps))
+  e.use <- names(x = all.exps) %>%
+    intersect(x = e.use)
   if (length(x = e.use) == 0) {
     stop("'experiments' not found: ", paste(experiments, collapse = "', '"))
   }
@@ -134,18 +127,21 @@
     if (length(x = tmp.list) == 1) {
       new.exps[[e]] <- tmp.list[[1]]
       if (any(assays %in% assayNames(x = new.exps[[e]]))) {
-        a.use <- intersect(x = assays, y = assayNames(x = new.exps[[e]]))
+        a.use <- new.exps[[e]] %>%
+          assayNames() %>%
+          intersect(x = assays)
         assays(x = new.exps[[e]]) <- assays(x = new.exps[[e]])[a.use]
       }
       if (any(reducedDims %in% reducedDimNames(x = new.exps[[e]]))) {
-        r.use <- intersect(
-          x = reducedDims,
-          y = reducedDimNames(x = new.exps[[e]])
-        )
+        r.use <- new.exps[[e]] %>%
+          reducedDimNames() %>%
+          intersect(x = reducedDims)
         reducedDims(x = new.exps[[e]]) <- reducedDims(x = new.exps[[e]])[r.use]
       }
       if (any(altExps %in% altExpNames(x = new.exps[[e]]))) {
-        alt.use <- intersect(x = altExps, y = altExpNames(x = new.exps[[e]]))
+        alt.use <- new.exps[[e]] %>%
+          altExpNames() %>%
+          intersect(x = altExps)
         altExps(x = new.exps[[e]]) <- altExps(x = new.exps[[e]])[altExps]
       }
       next
@@ -173,11 +169,10 @@
     reducedDims = global.reducedDims,
     verbose = verbose
   )[, rownames(x = cdata)]
-  new.SCME <- SingleCellMultiExperiment(
+  SingleCellMultiExperiment(
     experiments = new.exps,
     colData = cdata,
     sampleMap = new.smap,
     reducedDims = reducedDims(x = new.sce)
   )
-  return(new.SCME)
 }

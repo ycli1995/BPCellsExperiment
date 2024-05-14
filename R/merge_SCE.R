@@ -89,8 +89,9 @@
   new.altExps <- list()
   for (i in altExps) {
     verboseMsg("Merging altExp: ", i)
-    old.altExps <- lapply(X = SCEs, FUN = altExp, e = i, withDimnames = TRUE)
-    for (j in seq_len(length.out = length(x = old.altExps))) {
+    old.altExps <- list()
+    for (j in seq_along(SCEs)) {
+      old.altExps[[j]] <- altExp(x = SCEs[[j]], e = i, withDimnames = TRUE)
       colData(x = old.altExps[[j]]) <- NULL
       altExps(x = old.altExps[[j]]) <- NULL
       reducedDims(x = old.altExps[[j]]) <- NULL
@@ -120,12 +121,15 @@
   new.reducs <- list()
   for (i in reducs) {
     verboseMsg("Merging reducedDim: ", i)
-    old.reducs <- lapply(
-      X = SCEs,
-      FUN = function(x) x %>%
-        reducedDim(type = i, withDimnames = TRUE) %>%
+    old.reducs <- list()
+    for (j in seq_along(SCEs)) {
+      old.reducs[[j]] <- reducedDim(
+        x = SCEs[[j]],
+        type = i,
+        withDimnames = TRUE
+      ) %>%
         as.matrix()
-    )
+    }
     min.ncol <- vapply(
       X = old.reducs,
       FUN = ncol,
@@ -139,7 +143,9 @@
         "merging first ", min.ncol,
         call. = FALSE, immediate. = TRUE
       )
-      old.reducs <- lapply(X = old.reducs, FUN = function(x) x[, 1:min.ncol])
+      for (j in seq_along(along.with = old.reducs)) {
+        old.reducs[[j]] <- old.reducs[[j]][, 1:min.ncol]
+      }
     }
     new.reducs[[i]] <- Reduce(f = rbind, x = old.reducs)
   }
@@ -157,7 +163,10 @@
   new.assays <- list()
   for (i in assays) {
     verboseMsg("Merging assay: ", i)
-    old.assays <- lapply(X = SCEs, FUN = assay, i = i, withDimnames = TRUE)
+    old.assays <- list()
+    for (j in seq_along(SCEs)) {
+      old.assays[[j]] <- assay(x = SCEs[[j]], i = i, withDimnames = TRUE)
+    }
     new.assays[[i]] <- mergeMatrices(
       x = old.assays[[1]],
       y = old.assays[2:length(x = old.assays)]
